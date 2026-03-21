@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { Profile, DrawEntry, Winner } from '@/types'
+import { DrawEntry, Winner } from '@/types'
 
 // Uses the service role client internally to bypass RLS for administrative actions
 const getAdminSupabase = () => createClient(
@@ -92,7 +92,7 @@ export function calculatePrizePool(activeSubscriberCount: number) {
  * 3. Identifies winners and calculates exact split payouts.
  * 4. Inserts winner records.
  */
-export async function runDraw(drawId: string, drawnNumbers: number[], jackpotRolloverAmount = 0): Promise<any> {
+export async function runDraw(drawId: string, drawnNumbers: number[], jackpotRolloverAmount = 0): Promise<Record<string, unknown> | null> {
   const supabase = getAdminSupabase()
 
   // Find all active subscribers
@@ -104,7 +104,7 @@ export async function runDraw(drawId: string, drawnNumbers: number[], jackpotRol
   if (!activeUsers) return null
 
   // Calculate prize pools dynamically based on reality at the exact moment of execution
-  let pools = calculatePrizePool(activeUsers.length)
+  const pools = calculatePrizePool(activeUsers.length)
   pools.jackpot += jackpotRolloverAmount // Apply previous month rollover if passed
 
   // Simulation arrays to bulk DB inserts

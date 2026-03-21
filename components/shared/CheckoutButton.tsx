@@ -32,8 +32,9 @@ export default function CheckoutButton({
       if (data.url) {
         window.location.href = data.url
       }
-    } catch (e: any) {
-      console.error(e)
+    } catch (err: unknown) {
+      console.error(err)
+      const e = err as Error
       alert(e.message || 'A network error occurred connecting to checkout.')
     } finally {
       setLoading(false)
