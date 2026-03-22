@@ -4,23 +4,11 @@ import { useState, useEffect } from 'react'
 import { Loader2, ExternalLink, Filter, CheckCircle2, XCircle, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 
-export default function WinnersClient() {
-  const [winners, setWinners] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+export default function WinnersClient({ initialWinners = [] }: { initialWinners?: any[] }) {
+  const [winners, setWinners] = useState<any[]>(initialWinners)
 
   const [filterVerification, setFilterVerification] = useState('all')
   const [filterPayout, setFilterPayout] = useState('all')
-
-  const fetchWinners = async () => {
-    const res = await fetch('/api/admin/winners')
-    const data = await res.json()
-    setWinners(data)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchWinners()
-  }, [])
 
   const handleUpdateStatus = async (winnerId: string, field: 'verification_status' | 'payout_status', value: string) => {
     // Optimistic update
@@ -75,11 +63,6 @@ export default function WinnersClient() {
       </div>
 
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden min-h-[400px]">
-        {loading ? (
-          <div className="flex h-64 items-center justify-center">
-            <Loader2 className="w-8 h-8 text-zinc-600 animate-spin" />
-          </div>
-        ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-zinc-950/50 text-xs uppercase text-zinc-500 border-b border-zinc-800">
@@ -157,7 +140,6 @@ export default function WinnersClient() {
               </tbody>
             </table>
           </div>
-        )}
       </div>
     </div>
   )
