@@ -5,14 +5,30 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
+import { Progress } from "@/components/ui/progress"
+import { animate } from "framer-motion"
+import { useEffect } from 'react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState(0)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    if (loading) {
+      const controls = animate(0, 90, {
+        duration: 2,
+        onUpdate: (latest) => setProgress(latest)
+      })
+      return () => controls.stop()
+    } else {
+      setProgress(0)
+    }
+  }, [loading])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,11 +49,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-sm p-8 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl">
-      <div className="space-y-2 text-center mb-6">
-        <h2 className="text-2xl font-semibold tracking-tight text-white">Welcome back</h2>
-        <p className="text-sm text-zinc-400">Enter your credentials to access your account</p>
-      </div>
+    <div className="w-full max-w-sm relative bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden">
+      {loading && <Progress value={progress} className="absolute top-0 left-0 w-full rounded-none h-1 bg-zinc-800 [&>div]:bg-white" />}
+      <div className="p-8">
+        <div className="space-y-2 text-center mb-6">
+          <h2 className="text-2xl font-semibold tracking-tight text-white">Welcome back</h2>
+          <p className="text-sm text-zinc-400">Enter your credentials to access your account</p>
+        </div>
 
       <form onSubmit={handleLogin} className="space-y-4">
         <div className="space-y-2">
@@ -68,7 +86,7 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full h-10 bg-white text-zinc-950 font-medium rounded-md hover:bg-zinc-200 transition-colors disabled:opacity-50 flex items-center justify-center mt-2"
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign in'}
+          {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Signing in...</> : 'Sign in'}
         </button>
       </form>
 
@@ -78,6 +96,7 @@ export default function LoginPage() {
           Sign up
         </Link>
       </div>
+     </div>
     </div>
   )
 }

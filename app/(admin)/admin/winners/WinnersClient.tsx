@@ -3,9 +3,17 @@
 import { useState, useEffect } from 'react'
 import { Loader2, ExternalLink, Filter, CheckCircle2, XCircle, Clock } from 'lucide-react'
 import { format } from 'date-fns'
+import { createClient } from '@/lib/supabase/client'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export default function WinnersClient({ initialWinners = [] }: { initialWinners?: any[] }) {
   const [winners, setWinners] = useState<any[]>(initialWinners)
+  const supabase = createClient()
+  
+  const [actionModal, setActionModal] = useState<{ open: boolean, winnerId: string | null, field: string | null, value: string | null }>({ open: false, winnerId: null, field: null, value: null })
+  const [adminPassword, setAdminPassword] = useState('')
+  const [verifying, setVerifying] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
 
   const [filterVerification, setFilterVerification] = useState('all')
   const [filterPayout, setFilterPayout] = useState('all')
@@ -19,6 +27,37 @@ export default function WinnersClient({ initialWinners = [] }: { initialWinners?
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ [field]: value })
     })
+  }
+
+  const confirmAction = async () => {
+    setVerifying(true)
+    setAuthError(null)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || !user.email) {
+      setAuthError("No admin user detected")
+      setVerifying(false)
+      return
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: adminPassword
+    })
+
+    if (error) {
+      setAuthError('Incorrect password')
+      setVerifying(false)
+      return
+    }
+
+    if (actionModal.winnerId && actionModal.field && actionModal.value) {
+      await handleUpdateStatus(actionModal.winnerId, actionModal.field as any, actionModal.value)
+    }
+
+    setActionModal({ open: false, winnerId: null, field: null, value: null })
+    setAdminPassword('')
+    setVerifying(false)
   }
 
   const filteredWinners = winners.filter(w => {
@@ -100,16 +139,12 @@ export default function WinnersClient({ initialWinners = [] }: { initialWinners?
                         )}
                         <div className="flex gap-1.5 mt-1">
                           <button 
-                            onClick={() => {
-                              if(confirm('Approve proof?')) handleUpdateStatus(w.id, 'verification_status', 'approved')
-                            }}
+                            onClick={() => setActionModal({ open: true, winnerId: w.id, field: 'verification_status', value: 'approved' })}
                             className="text-[10px] font-bold px-2 py-1 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded border border-emerald-500/20 transition-colors uppercase tracking-wider disabled:opacity-50"
                             disabled={w.verification_status === 'approved'}
                           >Approve</button>
                           <button 
-                            onClick={() => {
-                              if(confirm('Reject proof?')) handleUpdateStatus(w.id, 'verification_status', 'rejected')
-                            }}
+                            onClick={() => setActionModal({ open: true, winnerId: w.id, field: 'verification_status', value: 'rejected' })}
                             className="text-[10px] font-bold px-2 py-1 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded border border-red-500/20 transition-colors uppercase tracking-wider disabled:opacity-50"
                             disabled={w.verification_status === 'rejected'}
                           >Reject</button>
@@ -120,9 +155,7 @@ export default function WinnersClient({ initialWinners = [] }: { initialWinners?
                       <StatusBadge type="payout" value={w.payout_status} />
                       <div className="flex items-center gap-2 w-full mt-2">
                           <button 
-                            onClick={() => {
-                              if(confirm('Mark as officially Paid out?')) handleUpdateStatus(w.id, 'payout_status', 'paid')
-                            }}
+                            onClick={() => setActionModal({ open: true, winnerId: w.id, field: 'payout_status', value: 'paid' })}
                             className="text-[10px] font-bold px-2 py-1 bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 rounded border border-yellow-500/20 transition-colors uppercase tracking-wider w-full disabled:opacity-50 shadow-sm"
                             disabled={w.payout_status === 'paid'}
                           >Mark as Paid</button>
@@ -141,6 +174,43 @@ export default function WinnersClient({ initialWinners = [] }: { initialWinners?
             </table>
           </div>
       </div>
+
+      <Dialog open={actionModal.open} onOpenChange={(open) => !open && setActionModal({ open: false, winnerId: null, field: null, value: null })}>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Action</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Enter your admin password to confirm this action
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <input 
+              type="password" 
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              placeholder="Admin Password"
+              className="w-full bg-black border border-zinc-800 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-500 transition-colors"
+            />
+            {authError && <p className="text-xs text-red-400 mt-2 font-medium">{authError}</p>}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <button 
+              onClick={() => setActionModal({ open: false, winnerId: null, field: null, value: null })}
+              className="px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors border border-transparent"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={confirmAction}
+              disabled={verifying || !adminPassword}
+              className="px-4 py-2 text-sm font-bold bg-white text-black hover:bg-zinc-200 transition-colors rounded-md disabled:opacity-50 flex items-center"
+            >
+              {verifying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Confirm
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
