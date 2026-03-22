@@ -17,7 +17,7 @@ export default function HomeClient({ charities, latestDraw }: { charities: Chari
 
   const fadeInUp = {
     hidden: { opacity: 0, y: 30 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } }
+    show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
   }
 
   const scrollToSection = (id: string) => {
@@ -160,10 +160,10 @@ export default function HomeClient({ charities, latestDraw }: { charities: Chari
           </div>
 
           <motion.div variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-             {charities.length > 0 ? charities.map((charity, i) => (
-                <motion.div key={charity.id} variants={fadeInUp} className="group bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-colors flex flex-col h-full relative p-6">
-                  {charity.is_featured && <div className="absolute top-0 right-8 w-16 h-1 bg-gradient-to-r from-emerald-400 to-purple-500 rounded-b-full"></div>}
-                  <Heart className="w-8 h-8 text-emerald-500 mb-6" />
+              {charities.length > 0 ? charities.map((charity, i) => (
+                <motion.div key={charity.id} variants={fadeInUp} className={`group bg-zinc-900 border ${charity.is_featured ? 'border-emerald-500 shadow-[0_0_30px_-5px_rgba(16,185,129,0.3)]' : 'border-zinc-800'} rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-colors flex flex-col h-full relative p-6`}>
+                  {charity.is_featured && <div className="absolute top-4 right-4 bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-emerald-500/30">FEATURED</div>}
+                  <Heart className={`w-8 h-8 mb-6 ${charity.is_featured ? 'text-emerald-400' : 'text-zinc-500'}`} />
                   <h3 className="text-xl font-bold text-white mb-3">{charity.name}</h3>
                   <p className="text-sm text-zinc-400 mb-6 flex-1">{charity.description}</p>
                 </motion.div>

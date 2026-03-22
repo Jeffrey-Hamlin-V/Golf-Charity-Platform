@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { Plus, Play, CheckCircle2, Ticket, Calculator, Loader2 } from 'lucide-react'
+import { Plus, Play, CheckCircle2, Ticket, Calculator, Loader2, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 
 export default function DrawsClient() {
   const [draws, setDraws] = useState<any[]>([])
@@ -15,6 +15,10 @@ export default function DrawsClient() {
 
   const [simulationResult, setSimulationResult] = useState<any>(null)
   const [simulatingDrawId, setSimulatingDrawId] = useState<string | null>(null)
+
+  const [expandedDrawId, setExpandedDrawId] = useState<string | null>(null)
+  const [expandedData, setExpandedData] = useState<any>(null)
+  const [expanding, setExpanding] = useState(false)
 
   const fetchDraws = async () => {
     const res = await fetch('/api/admin/draws')
@@ -83,6 +87,41 @@ export default function DrawsClient() {
     setProcessing(false)
   }
 
+  const handleCancelClick = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm('Are you sure you want to permanently delete this pending draw?')) return
+    
+    setProcessing(true)
+    const res = await fetch(`/api/admin/draws/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      if (simulatingDrawId === id) {
+        setSimulatingDrawId(null)
+        setSimulationResult(null)
+      }
+      fetchDraws()
+    } else {
+      const data = await res.json()
+      alert('Delete failed: ' + data.error)
+    }
+    setProcessing(false)
+  }
+
+  const toggleExpand = async (id: string) => {
+    if (expandedDrawId === id) {
+      setExpandedDrawId(null)
+      setExpandedData(null)
+      return
+    }
+    
+    setExpanding(true)
+    setExpandedDrawId(id)
+    const res = await fetch(`/api/admin/draws/${id}`)
+    if (res.ok) {
+      setExpandedData(await res.json())
+    }
+    setExpanding(false)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex bg-zinc-900 border border-zinc-800 p-4 rounded-xl items-center justify-between">
@@ -104,39 +143,118 @@ export default function DrawsClient() {
              </div>
           ) : (
             draws.map(draw => (
-              <div key={draw.id} className={`border p-5 rounded-xl flex items-center justify-between transition-all ${draw.status === 'published' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-zinc-900 border-zinc-800'}`}>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-bold text-white text-lg">{format(new Date(draw.month), 'MMMM yyyy')}</h3>
-                    {draw.status === 'published' ? (
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Published</span>
-                    ) : (
-                      <span className="px-2.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-[10px] text-orange-400 uppercase font-bold tracking-wider">Pending Execution</span>
+              <div key={draw.id} className={`border rounded-xl flex flex-col transition-all ${draw.status === 'published' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-zinc-900 border-zinc-800'}`}>
+                <div 
+                  className={`p-5 flex items-center justify-between ${draw.status === 'published' ? 'cursor-pointer hover:bg-emerald-500/10' : ''}`}
+                  onClick={() => draw.status === 'published' && toggleExpand(draw.id)}
+                >
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-white text-lg">{format(new Date(draw.month), 'MMMM yyyy')}</h3>
+                      {draw.status === 'published' ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Published</span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-[10px] text-orange-400 uppercase font-bold tracking-wider">Pending Execution</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 mt-2">
+                      <p className="text-xs text-zinc-400 flex items-center font-medium uppercase tracking-wider"><Calculator className="w-3.5 h-3.5 mr-1" /> {draw.logic} Logic</p>
+                      <p className="text-xs text-emerald-300 font-bold">Jackpot pool: €{draw.jackpot_amount?.toFixed(2)}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 items-center">
+                    <div className="flex -space-x-2 mr-4">
+                      {draw.numbers.map((n: number, i: number) => (
+                         <span key={i} className={`w-8 h-8 rounded-full border-2 border-zinc-900 flex items-center justify-center text-xs font-bold shadow-md ${draw.status === 'published' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-300'}`}>{n}</span>
+                      ))}
+                    </div>
+
+                    {draw.status === 'upcoming' && (
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleSimulate(draw.id); }} 
+                          disabled={processing}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-sm flex items-center disabled:opacity-50 shadow-sm"
+                        >
+                          <Play className="w-4 h-4 mr-2" /> Simulate
+                        </button>
+                        <button
+                          onClick={(e) => handleCancelClick(draw.id, e)}
+                          disabled={processing}
+                          className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors disabled:opacity-50"
+                          title="Cancel/Delete Draw"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {draw.status === 'published' && (
+                      <div className="text-emerald-500 ml-2">
+                        {expandedDrawId === draw.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                      </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-4 mt-2">
-                    <p className="text-xs text-zinc-400 flex items-center font-medium uppercase tracking-wider"><Calculator className="w-3.5 h-3.5 mr-1" /> {draw.logic} Logic</p>
-                    <p className="text-xs text-emerald-300 font-bold">Jackpot pool: €{draw.jackpot_amount?.toFixed(2)}</p>
-                  </div>
                 </div>
-                
-                <div className="flex gap-2 items-center">
-                  <div className="flex -space-x-2 mr-4">
-                    {draw.numbers.map((n: number, i: number) => (
-                       <span key={i} className={`w-8 h-8 rounded-full border-2 border-zinc-900 flex items-center justify-center text-xs font-bold shadow-md ${draw.status === 'published' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-300'}`}>{n}</span>
-                    ))}
-                  </div>
 
-                  {draw.status === 'upcoming' && (
-                    <button 
-                      onClick={() => handleSimulate(draw.id)} 
-                      disabled={processing}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-sm flex items-center disabled:opacity-50 shadow-sm"
-                    >
-                      <Play className="w-4 h-4 mr-2" /> Simulate
-                    </button>
-                  )}
-                </div>
+                {/* EXPANDED PUBLISHED DRAW RESULTS PANEL */}
+                {draw.status === 'published' && expandedDrawId === draw.id && (
+                  <div className="border-t border-emerald-500/20 bg-black/40 p-5 px-6 animate-in slide-in-from-top-2 duration-200">
+                    {expanding ? (
+                      <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-emerald-500" /></div>
+                    ) : expandedData ? (
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div className="bg-zinc-950 border border-zinc-800 p-4 rounded-xl">
+                            <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Total Entrants</p>
+                            <p className="text-2xl font-black text-white">{expandedData.totalEntries}</p>
+                          </div>
+                          <div className="bg-zinc-950 border border-zinc-800 p-4 rounded-xl">
+                            <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Total Draw Pool</p>
+                            <p className="text-2xl font-black text-white">€{(expandedData.totalEntries * 5).toFixed(2)}</p>
+                          </div>
+                          <div className="bg-zinc-950 border border-zinc-800 p-4 rounded-xl">
+                            <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-1">Jackpot Winners</p>
+                            <p className="text-2xl font-black text-white">{expandedData.winners.filter((w: any) => w.match_type === 'jackpot').length}</p>
+                          </div>
+                          <div className="bg-zinc-950 border border-zinc-800 p-4 rounded-xl">
+                            <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Match 4 Winners</p>
+                            <p className="text-2xl font-black text-white">{expandedData.winners.filter((w: any) => w.match_type === '4match').length}</p>
+                          </div>
+                        </div>
+
+                        {/* WINNER BREAKDOWNS */}
+                        <div className="grid lg:grid-cols-3 gap-4">
+                          {[
+                            { title: 'Jackpot (5 Matches)', type: 'jackpot', color: 'text-emerald-400', border: 'border-emerald-500/30' },
+                            { title: 'Match 4 Tier', type: '4match', color: 'text-white', border: 'border-zinc-800' },
+                            { title: 'Match 3 Tier', type: '3match', color: 'text-white', border: 'border-zinc-800' }
+                          ].map(tier => {
+                            const winners = expandedData.winners.filter((w: any) => w.match_type === tier.type)
+                            return (
+                              <div key={tier.type} className={`bg-zinc-950 border ${tier.border} rounded-xl p-4 flex flex-col`}>
+                                <h4 className={`text-xs uppercase font-bold tracking-widest mb-3 ${tier.color}`}>{tier.title}</h4>
+                                <div className="space-y-2 flex-1">
+                                  {winners.length === 0 ? (
+                                    <p className="text-sm text-zinc-500 italic py-2">No winners</p>
+                                  ) : winners.map((w: any) => (
+                                    <div key={w.id} className="flex justify-between items-center text-sm border-b border-zinc-800/50 pb-2 last:border-0">
+                                      <span className="text-zinc-300 font-medium">{w.profiles?.full_name || 'Anonymous'}</span>
+                                      <span className="font-bold text-white">€{w.prize_amount.toFixed(2)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-red-400 py-4">Failed to load detailed drawer data.</p>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}

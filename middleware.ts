@@ -50,6 +50,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Auto-route Admins away from standard dashboard
+  if (user && request.nextUrl.pathname === '/dashboard') {
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (profile?.role === 'admin') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin'
+      return NextResponse.redirect(url)
+    }
+  }
+
   return supabaseResponse
 }
 

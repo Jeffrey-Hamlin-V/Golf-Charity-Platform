@@ -326,21 +326,32 @@ export default function UsersClient({ charities }: { charities: Charity[] }) {
               </div>
             </div>
 
-            <div className="p-4 border-t border-zinc-800 bg-zinc-950 flex justify-end gap-3">
-              <button 
-                onClick={() => setSelectedUser(null)}
-                className="px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+            <div className="p-6 border-t border-zinc-800 bg-zinc-950 flex justify-between items-center gap-3">
+              <button
+                onClick={async () => {
+                  const role = selectedUser.role === 'admin' ? 'subscriber' : 'admin'
+                  if (!confirm(`Are you sure you want to change this user to ${role}?`)) return
+                  setSaving(true)
+                  await fetch('/api/admin/users', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: selectedUser.id, updates: { role } })
+                  })
+                  await fetchUsers()
+                  setSelectedUser(null)
+                  setSaving(false)
+                }}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${selectedUser.role === 'admin' ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500' : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500'}`}
               >
-                Cancel
+                {selectedUser.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
               </button>
-              <button 
-                onClick={handleSaveProfile}
-                disabled={saving}
-                className="px-5 py-2.5 text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center shadow-sm disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Save Profile Changes
-              </button>
+              
+              <div className="flex gap-3">
+                <button onClick={() => setSelectedUser(null)} className="px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white transition-colors">Cancel</button>
+                <button onClick={handleSaveProfile} disabled={saving} className="px-5 py-2.5 text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center shadow-sm disabled:opacity-50">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} Save Profile Changes
+                </button>
+              </div>
             </div>
           </div>
         </div>
