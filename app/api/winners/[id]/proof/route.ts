@@ -1,0 +1,25 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const getAdminSupabase = () => createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const supabase = getAdminSupabase()
+  const { proof_url } = await req.json()
+  
+  if (!proof_url) return NextResponse.json({ error: 'Missing uploaded proof_url' }, { status: 400 })
+
+  const { error } = await supabase
+    .from('winners')
+    .update({ 
+      proof_url, 
+      verification_status: 'pending' 
+    })
+    .eq('id', params.id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}

@@ -42,7 +42,7 @@ export default function WinnersClient() {
   // Helper for status badge rendering
   const StatusBadge = ({ type, value }: { type: 'proof' | 'payout', value: string }) => {
     if (value === 'pending') return <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20 w-fit"><Clock className="w-3" /> Pending</span>
-    if (value === 'verified' || value === 'paid') return <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 w-fit"><CheckCircle2 className="w-3" /> {value}</span>
+    if (value === 'verified' || value === 'approved' || value === 'paid') return <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 w-fit"><CheckCircle2 className="w-3" /> {value}</span>
     return <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20 w-fit"><XCircle className="w-3" /> {value}</span>
   }
 
@@ -58,7 +58,7 @@ export default function WinnersClient() {
           <select value={filterVerification} onChange={e => setFilterVerification(e.target.value)} className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none">
             <option value="all">All</option>
             <option value="pending">Pending</option>
-            <option value="verified">Verified</option>
+            <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
           </select>
         </div>
@@ -107,35 +107,42 @@ export default function WinnersClient() {
                     </td>
                     <td className="px-6 py-4 space-y-2">
                       <StatusBadge type="proof" value={w.verification_status} />
-                      <div className="flex items-center gap-2">
-                        {w.proof_url && (
-                          <a href={w.proof_url} target="_blank" className="text-xs text-blue-400 hover:text-blue-300 flex items-center font-medium">
-                            <ExternalLink className="w-3 h-3 mr-1" /> View Image
+                      <div className="flex flex-col gap-2 mt-2">
+                        {w.proof_url ? (
+                          <a href={w.proof_url} target="_blank" className="text-xs text-blue-400 hover:text-blue-300 flex items-center font-medium w-fit bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded">
+                            <ExternalLink className="w-3 h-3 mr-1" /> View Proof Image
                           </a>
+                        ) : (
+                          <span className="text-xs text-zinc-600 font-medium italic">No image uploaded</span>
                         )}
-                        <select 
-                          value={w.verification_status} 
-                          onChange={(e) => handleUpdateStatus(w.id, 'verification_status', e.target.value)}
-                          className="bg-zinc-950 border border-zinc-800 text-white text-xs px-2 py-1 rounded w-full"
-                        >
-                          <option value="pending">Mark Pending</option>
-                          <option value="verified">Approve Proof</option>
-                          <option value="rejected">Reject Proof</option>
-                        </select>
+                        <div className="flex gap-1.5 mt-1">
+                          <button 
+                            onClick={() => {
+                              if(confirm('Approve proof?')) handleUpdateStatus(w.id, 'verification_status', 'approved')
+                            }}
+                            className="text-[10px] font-bold px-2 py-1 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded border border-emerald-500/20 transition-colors uppercase tracking-wider disabled:opacity-50"
+                            disabled={w.verification_status === 'approved'}
+                          >Approve</button>
+                          <button 
+                            onClick={() => {
+                              if(confirm('Reject proof?')) handleUpdateStatus(w.id, 'verification_status', 'rejected')
+                            }}
+                            className="text-[10px] font-bold px-2 py-1 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded border border-red-500/20 transition-colors uppercase tracking-wider disabled:opacity-50"
+                            disabled={w.verification_status === 'rejected'}
+                          >Reject</button>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 space-y-2">
                       <StatusBadge type="payout" value={w.payout_status} />
-                      <div className="flex items-center gap-2 w-full">
-                        <select 
-                          value={w.payout_status} 
-                          onChange={(e) => handleUpdateStatus(w.id, 'payout_status', e.target.value)}
-                          className="bg-zinc-950 border border-zinc-800 text-white text-xs px-2 py-1 rounded w-full"
-                        >
-                          <option value="pending">Awaiting Payout</option>
-                          <option value="paid">Record Paid</option>
-                          <option value="failed">Mark Failed</option>
-                        </select>
+                      <div className="flex items-center gap-2 w-full mt-2">
+                          <button 
+                            onClick={() => {
+                              if(confirm('Mark as officially Paid out?')) handleUpdateStatus(w.id, 'payout_status', 'paid')
+                            }}
+                            className="text-[10px] font-bold px-2 py-1 bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 rounded border border-yellow-500/20 transition-colors uppercase tracking-wider w-full disabled:opacity-50 shadow-sm"
+                            disabled={w.payout_status === 'paid'}
+                          >Mark as Paid</button>
                       </div>
                     </td>
                   </tr>

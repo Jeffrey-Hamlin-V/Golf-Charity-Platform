@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { format } from 'date-fns'
 import { Ticket, Trophy, XCircle } from 'lucide-react'
+import WinnerProofUpload from './WinnerProofUpload'
 
 export default async function DrawsPage() {
   const supabase = createClient()
@@ -56,6 +57,7 @@ export default async function DrawsPage() {
                       <div>
                         <p className="text-xs font-bold text-yellow-500 uppercase tracking-wider">{myWin.match_type} Winner!</p>
                         <p className="text-sm font-medium text-yellow-400">${myWin.prize_amount.toFixed(2)} Won</p>
+                        <WinnerProofUpload winner={myWin} userId={user.id} />
                       </div>
                     </div>
                   ) : myEntry ? (
