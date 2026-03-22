@@ -32,8 +32,16 @@ export default function CharityClient({
     setError(null)
     setSuccess(false)
 
-    if (pct < 10 || pct > 100) {
-      setError('Contribution percentage must be between 10% and 100%')
+    if (pct < 10) {
+      setError('Minimum contribution is 10%')
+      setPct(10)
+      setLoading(false)
+      return
+    }
+
+    if (pct > 100) {
+      setError('Contribution percentage cannot exceed 100%')
+      setPct(100)
       setLoading(false)
       return
     }
@@ -112,7 +120,16 @@ export default function CharityClient({
                 max="100"
                 step="5"
                 value={pct}
-                onChange={(e) => setPct(Number(e.target.value))}
+                onChange={(e) => {
+                  let val = Number(e.target.value)
+                  if (val < 10) {
+                    setError('Minimum contribution is 10%')
+                    val = 10
+                  } else {
+                    setError(null)
+                  }
+                  setPct(val)
+                }}
                 className="w-full accent-pink-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
               />
               <p className="text-xs text-zinc-500 leading-relaxed">

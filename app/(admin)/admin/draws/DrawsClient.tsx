@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { Plus, Play, CheckCircle2, Ticket, Calculator, Loader2, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function DrawsClient() {
   const [draws, setDraws] = useState<any[]>([])
@@ -12,6 +13,8 @@ export default function DrawsClient() {
   const [modalOpen, setModalOpen] = useState(false)
   const [newMonth, setNewMonth] = useState('')
   const [newLogic, setNewLogic] = useState('algorithmic')
+  const [modalError, setModalError] = useState<string | null>(null)
+  const supabase = createClient()
 
   const [simulationResult, setSimulationResult] = useState<any>(null)
   const [simulatingDrawId, setSimulatingDrawId] = useState<string | null>(null)
@@ -34,6 +37,18 @@ export default function DrawsClient() {
   const handleCreateDraw = async (e: React.FormEvent) => {
     e.preventDefault()
     setProcessing(true)
+    setModalError(null)
+
+    const { count } = await supabase
+      .from('draws')
+      .select('*', { count: 'exact', head: true })
+      .eq('month', `${newMonth}-01`)
+      
+    if (count !== null && count > 0) {
+      setModalError("A draw already exists for this month")
+      setProcessing(false)
+      return
+    }
     
     // API logic automatically computes the 5 numbers internally based on the logic flag
     await fetch('/api/admin/draws', {
@@ -333,9 +348,14 @@ export default function DrawsClient() {
              </div>
              
              <div className="p-6 space-y-5">
+               {modalError && (
+                 <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 text-sm font-medium text-red-500 rounded-lg">
+                   {modalError}
+                 </div>
+               )}
                <div className="space-y-2">
                  <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Designated Draw Month</label>
-                 <input type="month" required value={newMonth} onChange={e => setNewMonth(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-500" />
+                 <input type="month" required value={newMonth} onChange={e => { setNewMonth(e.target.value); setModalError(null); }} className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-500" />
                </div>
 
                <div className="space-y-2">
@@ -348,7 +368,7 @@ export default function DrawsClient() {
              </div>
 
              <div className="p-4 border-t border-zinc-800 bg-zinc-900/50 flex justify-end gap-3">
-               <button type="button" onClick={() => setModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white transition-colors">Cancel</button>
+               <button type="button" onClick={() => { setModalOpen(false); setModalError(null); }} className="px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white transition-colors">Cancel</button>
                <button type="submit" disabled={processing} className="px-5 py-2.5 text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center shadow-sm disabled:opacity-50">
                  {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} Initialize Draw
                </button>

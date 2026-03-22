@@ -27,6 +27,12 @@ export default function ScoreClient({ initialScores, userId }: { initialScores: 
     setLoading(true)
     setError(null)
 
+    if (!date) {
+      setError('Date played is required')
+      setLoading(false)
+      return
+    }
+
     const numScore = parseInt(score)
     if (isNaN(numScore) || numScore < 1 || numScore > 45) {
       setError('Score must be between 1 and 45')

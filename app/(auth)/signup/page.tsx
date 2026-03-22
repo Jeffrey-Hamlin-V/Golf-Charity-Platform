@@ -53,14 +53,28 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
     
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address")
+      setLoading(false)
+      return
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match")
       setLoading(false)
       return
     }
 
+    if (!charityId) {
+      setError("Please select a charity to support")
+      setLoading(false)
+      return
+    }
+
     if (contributionPct < 10) {
       setError("Minimum contribution is 10%")
+      setContributionPct(10)
       setLoading(false)
       return
     }
@@ -79,7 +93,15 @@ export default function SignupPage() {
 
     setLoading(false)
     if (signUpError) {
-      setError(signUpError.message)
+      const isDuplicate = signUpError.code === 'user_already_exists' || 
+                          signUpError.message.toLowerCase().includes('already registered') || 
+                          signUpError.message.toLowerCase().includes('user already exists')
+      
+      if (isDuplicate) {
+        setError("An account with this email already exists.")
+      } else {
+        setError(signUpError.message)
+      }
     } else {
       router.push('/login?message=Account created successfully. Please sign in.')
     }
@@ -168,7 +190,21 @@ export default function SignupPage() {
               min="10"
               max="100"
               value={contributionPct}
-              onChange={(e) => setContributionPct(Number(e.target.value))}
+              onChange={(e) => {
+                let val = Number(e.target.value)
+                if (val < 10 && e.target.value !== '') {
+                  setError('Minimum contribution is 10%')
+                } else {
+                  setError(null)
+                }
+                setContributionPct(val)
+              }}
+              onBlur={() => {
+                if (contributionPct < 10) {
+                  setContributionPct(10)
+                  setError('Minimum contribution is 10%')
+                }
+              }}
               className="w-full h-10 px-3 bg-zinc-950 border border-zinc-800 rounded-md text-sm text-white focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500"
               required
             />
